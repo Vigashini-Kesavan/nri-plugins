@@ -1,27 +1,28 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Policies &mdash; NRI Plugins 0.1.0 documentation</title>
-      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <title>Policies &mdash; NRI Plugins v0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-        <script src="../../../_static/jquery.js"></script>
-        <script src="../../../_static/underscore.js"></script>
-        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="../../../_static/doctools.js"></script>
-        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=fa47ad08"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
     <link rel="next" title="Topology-Aware Policy" href="topology-aware.html" />
-    <link rel="prev" title="Configuration" href="../configuration.html" /> 
+    <link rel="prev" title="Dynamic Configuration" href="../configuration.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -36,7 +37,7 @@
             NRI Plugins
           </a>
               <div class="version">
-                0.1.0
+                v0.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
@@ -46,25 +47,25 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">Resource Policy Plugins</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../introduction.html">Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../setup.html">Setup and Usage</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../configuration.html">Configuration</a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="#">Policies</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="topology-aware.html">Topology-Aware Policy</a></li>
-<li class="toctree-l4"><a class="reference internal" href="balloons.html">Balloons Policy</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../node-agent.html">Dynamic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../configuration.html">Dynamic Configuration</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Policies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="topology-aware.html">Topology-Aware Policy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="balloons.html">Balloons Policy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="template.html">Template Policy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="common-functionality.html">Common Functionality</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../developers-guide/index.html">Developer’s Guide</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../memory/index.html">Memory plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../deployment/index.html">Deployment</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference external" href="https://github.com/containers/nri-plugins">Project GitHub repository</a></li>
 </ul>
@@ -84,10 +85,9 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../index.html">Resource Policy Plugins</a></li>
-          <li class="breadcrumb-item"><a href="../configuration.html">Configuration</a></li>
       <li class="breadcrumb-item active">Policies</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../../../_sources/docs/resource-policy/policy/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../../../_sources/docs/resource-policy/policy/index.md.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -96,16 +96,25 @@
            <div itemprop="articleBody">
              
   <section id="policies">
-<span id="resource-policies"></span><h1>Policies<a class="headerlink" href="#policies" title="Permalink to this heading"></a></h1>
-<p>Currently there are two resource policies:</p>
-<p>The Topology Aware resource policy provides a nearly zero configuration resource
-policy that allocates resources evenly in order to avoid the “noisy neighbor” problem.</p>
-<p>The Balloons resource policy allows user to allocate workloads to resources in a more
-user controlled way.</p>
+<h1>Policies<a class="headerlink" href="#policies" title="Link to this heading"></a></h1>
+<p>Currently there are two real resource policies implemented:</p>
+<p>The Topology Aware resource policy provides a nearly zero configuration
+resource policy that allocates resources evenly in order to avoid the “noisy
+neighbor” problem.</p>
+<p>The Balloons resource policy allows user to allocate workloads to resources in
+a more user controlled way.</p>
+<p>Additionally there is a wire-frame Template resource policy implementation
+without any real resource assignment logic. It can be used as a template to
+implement new policies from scratch.</p>
+<p>Also, there is some common functionality offered by the shared generic resource
+management code used in these policies. This functionality is available in all
+policies.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="topology-aware.html">Topology-Aware Policy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="balloons.html">Balloons Policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="template.html">Template Policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="common-functionality.html">Common Functionality</a></li>
 </ul>
 </div>
 </section>
@@ -114,7 +123,7 @@ user controlled way.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../configuration.html" class="btn btn-neutral float-left" title="Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../configuration.html" class="btn btn-neutral float-left" title="Dynamic Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="topology-aware.html" class="btn btn-neutral float-right" title="Topology-Aware Policy" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
@@ -152,7 +161,7 @@ user controlled way.</p>
         </dl>
         <dl>
           <dt>
-          <a href="/containers/nri-plugins/releases">all releases</a>
+          <a href="/nri-plugins/releases">all releases</a>
           </dt>
         </dl>
       </div>
