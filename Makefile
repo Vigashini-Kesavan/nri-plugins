@@ -74,13 +74,16 @@ DOCKER_BUILD := $(DOCKER) build
 #   MUST NOT have an nri-% prefix.
 #
 PLUGINS ?= \
-	nri-resource-policy-topology-aware \
-	nri-resource-policy-balloons \
-	nri-resource-policy-template \
-	nri-memory-policy \
-	nri-memory-qos \
-	nri-memtierd \
-        nri-sgx-epc
+nri-resource-policy-real-time
+#       nri-resource-policy-real-time \
+#	nri-resource-policy-topology-aware \
+#	nri-resource-policy-balloons \
+#	nri-resource-policy-template \
+#	nri-memory-policy \
+#	nri-memory-qos \
+#	nri-memtierd \
+#       nri-sgx-epc  \
+#	nri-resource-policy-real-time
 
 BINARIES ?= \
 	config-manager \
@@ -91,7 +94,7 @@ OTHER_IMAGE_TARGETS ?= \
 	nri-plugins-operator-bundle-image
 
 ifneq ($(V),1)
-  Q := @
+  Q := 
 endif
 
 # Git (tagged) version and revisions we'll use to linker-tag our binaries with.
@@ -242,6 +245,8 @@ memtierd-img: image.nri-memtierd
 sgx-epc sgx: $(BIN_PATH)/nri-sgx-epc
 sgx-epc-img: image.nri-sgx-epc
 config-manager: $(BIN_PATH)/config-manager
+r-t real-time: $(BIN_PATH)/nri-resource-policy-real-time
+rt-img real-time-img: image.nri-resource-policy-real-time
 
 #
 # Image building test deployment generation targets
@@ -279,6 +284,7 @@ image.%:
 	NRI_IMAGE_ID=`awk '{print $$1}' <<< "$${NRI_IMAGE_INFO}"`; \
 	NRI_IMAGE_REPOTAG=`awk '{print $$2}' <<< "$${NRI_IMAGE_INFO}"`; \
 	NRI_IMAGE_TAR=`realpath "$(IMAGE_PATH)/$${tag}-image-$${NRI_IMAGE_ID}.tar"`; \
+	echo "$(DOCKER) image save "$${NRI_IMAGE_REPOTAG}" > "$${NRI_IMAGE_TAR}""   \
 	$(DOCKER) image save "$${NRI_IMAGE_REPOTAG}" > "$${NRI_IMAGE_TAR}";
 
 nri-plugins-operator-image:
@@ -313,6 +319,14 @@ $(BIN_PATH)/nri-resource-policy-template: \
     $(shell for f in cmd/plugins/template/*.go; do echo $$f; done; \
                 for dir in $(shell $(GO_DEPS) ./cmd/plugins/template/... | \
                           grep -E '(/nri-plugins/)|(cmd/plugins/template/)' | \
+                          sed 's#github.com/containers/nri-plugins/##g'); do \
+                find $$dir -name \*.go; \
+            done | sort | uniq)
+
+$(BIN_PATH)/nri-resource-policy-real-time: \
+    $(shell for f in cmd/plugins/real-time/*.go; do echo $$f; done; \
+            for dir in $(shell $(GO_DEPS) ./cmd/plugins/real-time/... | \
+                          grep -E '(/nri-plugins/)|(cmd/plugins/real-time/)' | \
                           sed 's#github.com/containers/nri-plugins/##g'); do \
                 find $$dir -name \*.go; \
             done | sort | uniq)

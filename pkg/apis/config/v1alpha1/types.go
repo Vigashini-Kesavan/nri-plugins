@@ -23,6 +23,7 @@ import (
 	"github.com/containers/nri-plugins/pkg/apis/config/v1alpha1/resmgr/policy/balloons"
 	"github.com/containers/nri-plugins/pkg/apis/config/v1alpha1/resmgr/policy/template"
 	"github.com/containers/nri-plugins/pkg/apis/config/v1alpha1/resmgr/policy/topologyaware"
+	"github.com/containers/nri-plugins/pkg/apis/config/v1alpha1/resmgr/policy/realtime"
 )
 
 // TopologyAwarePolicy represents the configuration for the topology-aware policy.
@@ -127,6 +128,39 @@ type TemplatePolicyList struct {
 	Items []TemplatePolicy `json:"items"`
 }
 
+// RealTimePolicy represents the configuration for the real-time policy.
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+type RealTimePolicy struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   RealTimePolicySpec `json:"spec"`
+	Status ConfigStatus            `json:"status,omitempty"`
+}
+
+// RealTimePolicySpec describes a real-time policy.
+type RealTimePolicySpec struct {
+	realtime.Config `json:",inline"`
+	// +optional
+	Control control.Config `json:"control,omitempty"`
+	// +optional
+	Log log.Config `json:"log,omitempty"`
+	// +optional
+	Instrumentation instrumentation.Config `json:"instrumentation,omitempty"`
+	// +optional
+	// +kubebuilder:default={"nodeResourceTopology": true }
+	Agent AgentConfig `json:"agent,omitempty"`
+}
+
+// RealTimePolicyList represents a list of RealTimePolicies.
+// +kubebuilder:object:root=true
+type RealTimePolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	Items []RealTimePolicy `json:"items"`
+}
 // ConfigStatus is the per-node status for a configuration resource.
 type ConfigStatus struct {
 	Nodes map[string]NodeStatus `json:"nodes"`
@@ -150,5 +184,6 @@ func init() {
 		&TopologyAwarePolicy{}, &TopologyAwarePolicyList{},
 		&BalloonsPolicy{}, &BalloonsPolicyList{},
 		&TemplatePolicy{}, &TemplatePolicyList{},
+		&RealTimePolicy{}, &RealTimePolicyList{},
 	)
 }

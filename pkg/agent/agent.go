@@ -103,6 +103,11 @@ func TemplateConfigInterface() ConfigInterface {
 	return newConfigIf(templateConfig)
 }
 
+// RealTimeConfigInterface returns a ConfigInterface
+func RealTimeConfigInterface() ConfigInterface {
+	return newConfigIf(realTimeConfig)
+}
+
 // NotifyFn is a function to call when the effective configuration changes.
 type NotifyFn func(cfg interface{}) (bool, error)
 

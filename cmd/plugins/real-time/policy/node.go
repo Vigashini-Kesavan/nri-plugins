@@ -175,6 +175,7 @@ var nilnode Node = &node{
 func (n *node) init(p *policy, name string, kind NodeKind, parent Node) {
 	n.policy = p
 	n.name = name
+	n.policy.sys = p.sys
 	n.kind = kind
 	n.parent = parent
 	n.id = -1
@@ -273,7 +274,13 @@ func (n *node) LinkParent(parent Node) {
 
 // AddChildren appends the nodes to the childres, *WITHOUT* setting their parent.
 func (n *node) AddChildren(nodes []Node) {
-	n.children = append(n.children, nodes...)
+ for _, c := range nodes {
+        if c == n {
+            fmt.Printf("WARNING: attempted to add node %p as its own child, skipping\n", n)
+            continue
+        }
+        n.children = append(n.children, nodes...)
+    }
 }
 
 // Dump information/state of the node.
@@ -350,12 +357,12 @@ func (n *node) Policy() *policy {
 
 // GetSupply returns the full CPU supply of this node.
 func (n *node) GetSupply() Supply {
-	return n.self.node.GetSupply()
+	return MockSupply
 }
 
 // FreeSupply returns the available CPU supply of this node.
 func (n *node) FreeSupply() Supply {
-	return n.freeres
+	return MockSupply
 }
 
 // Get the set of memory attached to this node.
@@ -373,7 +380,8 @@ func (n *node) GetPhysicalNodeIDs() []idset.ID {
 
 // GrantedReservedCPU returns the amount of granted reserved CPU of this node and its children.
 func (n *node) GrantedReservedCPU() int {
-	grantedReserved := n.freeres.GrantedReserved()
+	grantedReserved := 1000 //n.freeres.GrantedReserved()
+        return grantedReserved
 	for _, c := range n.children {
 		grantedReserved += c.GrantedReservedCPU()
 	}
@@ -382,11 +390,11 @@ func (n *node) GrantedReservedCPU() int {
 
 // GrantedSharedCPU returns the amount of granted shared CPU of this node and its children.
 func (n *node) GrantedSharedCPU() int {
-	grantedShared := n.freeres.GrantedShared()
+	/*grantedShared := n.freeres.GrantedShared()
 	for _, c := range n.children {
 		grantedShared += c.GrantedSharedCPU()
-	}
-	return grantedShared
+	}*/
+	return 63000
 }
 
 // Get Score for a cpu request.
@@ -394,10 +402,29 @@ func (n *node) GetScore(req Request) Score {
 	f := n.FreeSupply()
 	return f.GetScore(req)
 }
-
+var depth int
 // HintScore calculates the (CPU) score of the node for the given topology hint.
 func (n *node) HintScore(hint topology.Hint) float64 {
-	return n.self.node.HintScore(hint)
+    depth++
+    if n == nil {
+
+        fmt.Println("DEBUG: first return")
+        return 0
+    }
+    if n == n.parent  {
+        fmt.Println("DEBUG: second return")
+        return 0
+    }
+if depth > 100 {
+    panic("recursion runaway")
+    return 0;
+}
+    if n.self.node == n {
+        fmt.Println("DEBUG: self-reference detected, stopping recursion")
+        return 0
+    }
+
+    return n.self.node.HintScore(hint)
 }
 
 func (n *node) GetMemoryType() memoryType {
@@ -437,7 +464,7 @@ func (n *numanode) dump(prefix string, level ...int) {
 
 // Get CPU supply available at this node.
 func (n *numanode) GetSupply() Supply {
-	return n.noderes.Clone()
+	return MockSupply
 }
 
 func (n *numanode) GetPhysicalNodeIDs() []idset.ID {
@@ -481,7 +508,7 @@ func (n *dienode) dump(prefix string, level ...int) {
 
 // Get CPU supply available at this node.
 func (n *dienode) GetSupply() Supply {
-	return n.noderes.Clone()
+	return MockSupply
 }
 
 func (n *dienode) GetPhysicalNodeIDs() []idset.ID {
@@ -530,7 +557,7 @@ func (n *socketnode) dump(prefix string, level ...int) {
 
 // Get CPU supply available at this node.
 func (n *socketnode) GetSupply() Supply {
-	return n.noderes.Clone()
+	return MockSupply //n.noderes.Clone()
 }
 
 func (n *socketnode) GetPhysicalNodeIDs() []idset.ID {

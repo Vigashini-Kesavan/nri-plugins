@@ -9,4 +9,5 @@ resources:
 - bases/config.nri_balloonspolicies.yaml
 - bases/config.nri_templatepolicies.yaml
 - bases/config.nri_topologyawarepolicies.yaml
+- bases/config.nri_realtimepolicies.yaml
 #+kubebuilder:scaffold:crdkustomizeresource

@@ -15,6 +15,7 @@
 package balloons
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -90,6 +91,8 @@ func TestChangesBalloons(t *testing.T) {
 			value := changesBalloons(tc.opts1, tc.opts2)
 			if value != tc.expectedValue {
 				t.Errorf("Expected return value %v but got %v", tc.expectedValue, value)
+			} else {
+				fmt.Printf("Test %q passed\n expected value %v\n", tc.name, tc.expectedValue)
 			}
 		})
 	}

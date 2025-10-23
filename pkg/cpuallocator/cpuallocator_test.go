@@ -15,6 +15,7 @@
 package cpuallocator
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -306,12 +307,19 @@ func TestClusteredAllocation(t *testing.T) {
 	// Run tests
 	for _, tc := range tcs {
 		t.Run(tc.description, func(t *testing.T) {
+			fmt.Printf("Running test: %s\n", tc.description)
+			fmt.Printf("Inputs: from=%d, cnt=%d\n", tc.from, tc.cnt)
+			fmt.Printf("Expected result: %q\n", tc.expected)
+
 			a := newAllocatorHelper(sys, topoCache)
 			a.from = tc.from
 			a.cnt = tc.cnt
 			result := a.allocate()
+			fmt.Printf("Raw result: %+v\n", result)
 			if !result.Equals(tc.expected) {
 				t.Errorf("expected %q, result was %q", tc.expected, result)
+			} else {
+				fmt.Printf("Success: expected %q, result was %q\n", tc.expected, result)
 			}
 		})
 	}
@@ -332,11 +340,12 @@ func TestClusteredCoreKindAllocation(t *testing.T) {
 	if err := utils.UncompressTbz2(path.Join("testdata", "sysfs.tar.bz2"), tmpdir); err != nil {
 		t.Fatalf("failed to decompress testdata: %v", err)
 	}
-
+	fmt.Println("bp 1")
 	// Discover mock system from the testdata
 	sys, err := sysfs.DiscoverSystemAt(
 		path.Join(tmpdir, "sysfs", "2-socket-4-node-40-core", "sys"),
 		sysfs.DiscoverCPUTopology, sysfs.DiscoverMemTopology)
+	fmt.Println("bp 2")
 	if err != nil {
 		t.Fatalf("failed to discover mock system: %v", err)
 	}
@@ -409,7 +418,14 @@ func TestClusteredCoreKindAllocation(t *testing.T) {
 			pkg:     0,
 			die:     0,
 			cluster: 9,
-			cpus:    cpuset.MustParse("56-59"),
+			cpus:    cpuset.MustParse("56-57"),
+			kind:    sysfs.EfficientCore,
+		},
+		{
+			pkg:     0,
+			die:     0,
+			cluster: 10,
+			cpus:    cpuset.MustParse("58-59"),
 			kind:    sysfs.EfficientCore,
 		},
 
@@ -556,6 +572,13 @@ func TestClusteredCoreKindAllocation(t *testing.T) {
 			cpus:    cpuset.MustParse("56-59"),
 			kind:    sysfs.EfficientCore,
 		},
+		/*	{
+			pkg:     0,
+			die:     0,
+			cluster: 10,
+			cpus:    cpuset.MustParse("58-59"),
+			kind:    sysfs.EfficientCore,
+		}, */
 
 		{
 			pkg:     1,
@@ -733,6 +756,10 @@ func TestClusteredCoreKindAllocation(t *testing.T) {
 	// Run tests
 	for _, tc := range tcs {
 		t.Run(tc.description, func(t *testing.T) {
+			fmt.Printf("Running test: %s\n", tc.description)
+			//fmt.Printf("Inputs: from=%d, cnt=%d\n", tc.from, tc.cnt)
+			fmt.Printf("Expected result: %q\n", tc.expected)
+
 			topoCache := newTopologyCache(sys)
 			topoCache.clusters = tc.clusters
 			a := newAllocatorHelper(sys, topoCache)
@@ -740,8 +767,11 @@ func TestClusteredCoreKindAllocation(t *testing.T) {
 			a.prefer = tc.prefer
 			a.cnt = tc.cnt
 			result := a.allocate()
+			//fmt.Printf("Raw result: %+v\n", result)
 			if !result.Equals(tc.expected) {
 				t.Errorf("expected %q, result was %q", tc.expected, result)
+			} else {
+				fmt.Printf("Success: expected %q, result was %q\n", tc.expected, result)
 			}
 		})
 	}

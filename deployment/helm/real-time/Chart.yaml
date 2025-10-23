@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: unstable
+description: |
+  Real-time NRI resource policy plugin is a NRI plugin that will
+  apply resource isolation for real-time containers
+  running in the system.
+name: nri-resource-policy-real-time
+sources:
+ - https://github.com/containers/nri-plugins
+home: https://github.com/containers/nri-plugins
+type: application
+version: v0.0.0

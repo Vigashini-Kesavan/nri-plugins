@@ -103,6 +103,8 @@ require (
 )
 
 replace (
+        github.com/containers/nri-plugins/pkg/apis/config/v1alpha1 => /home/vikesava/pkg/apis/config/v1alpha1
+	github.com/containers/nri-plugins/pkg/apis/config/v1alpha1/resmgr/policy/realtime => /home/vikesava/nri-plugins/pkg/apis/config/v1alpha1/resmgr/policy/realtime
 	github.com/containers/nri-plugins/pkg/topology v0.0.0 => ./pkg/topology
 	github.com/opencontainers/runtime-tools => github.com/opencontainers/runtime-tools v0.0.0-20221026201742-946c877fa809
 )

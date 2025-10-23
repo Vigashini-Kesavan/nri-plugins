@@ -232,6 +232,7 @@ copy-crds: ## Copy CRDs and CRs from root directory to operator directory for bu
 	cp $(SAMPLE_SOURCE_DIR)/balloons-config.yaml $(SAMPLE_DEST_DIR)
 	cp $(SAMPLE_SOURCE_DIR)/template-config.yaml $(SAMPLE_DEST_DIR)
 	cp $(SAMPLE_SOURCE_DIR)/topologyaware-config.yaml $(SAMPLE_DEST_DIR)
+	cp $(SAMPLE_SOURCE_DIR)/realtime-config.yaml $(SAMPLE_DEST_DIR)
 	cp $(SAMPLE_SOURCE_DIR)/noderesourcetopology.yaml $(SAMPLE_DEST_DIR)
 
 .PHONY: cleanup-crds
@@ -240,6 +241,7 @@ cleanup-crds: ## Clean up temporarily copied CRDs and CRs.
 	rm -f $(SAMPLE_DEST_DIR)/balloons-config.yaml
 	rm -f $(SAMPLE_DEST_DIR)/template-config.yaml
 	rm -f $(SAMPLE_DEST_DIR)/topologyaware-config.yaml
+	rm -f $(SAMPLE_DEST_DIR)/realtime-config.yaml
 	rm -f $(SAMPLE_DEST_DIR)/noderesourcetopology.yaml
 	rm -rf $(OPERATOR_SDK)
 	rm config/manager/kustomization.yaml

@@ -1,0 +1,48 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nri-resource-policy-real-time
+  labels:
+    {{- include "nri-plugin.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - watch
+- apiGroups:
+  - topology.node.k8s.io
+  resources:
+  - noderesourcetopologies
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - delete
+- apiGroups:
+    - "resource.k8s.io"
+  resources:
+    - resourceslices
+  verbs:
+    - list
+    - watch
+    - create
+    - update
+    - delete
+- apiGroups:
+    - "resource.k8s.io"
+  resources:
+    - resourceclaims
+    - deviceclasses
+  verbs:
+    - get
+- apiGroups:
+    - "resource.k8s.io"
+  resources:
+    - resourceclaims/status
+  verbs:
+    - patch
+    - update

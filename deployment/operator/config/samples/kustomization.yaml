@@ -6,4 +6,5 @@ resources:
 - template-config.yaml
 - topologyaware-config.yaml
 - noderesourcetopology.yaml
+- realtime-config.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

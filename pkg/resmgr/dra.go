@@ -60,6 +60,7 @@ const (
 )
 
 func (resmgr *resmgr) publishCPUs(cpuIDs []system.ID) error {
+        fmt.Errorf("entering publishCPUs")
 	if resmgr.dra == nil {
 		return fmt.Errorf("can't publish CPUs as DRA devices, no DRA plugin")
 	}
@@ -68,13 +69,11 @@ func (resmgr *resmgr) publishCPUs(cpuIDs []system.ID) error {
 		log.Errorf("failed to write CDI Spec file: %v", err)
 		return err
 	}
-
 	cpuDevices := resmgr.system.CPUsAsDRADevices(cpuIDs)
 	if err := resmgr.dra.PublishResources(context.Background(), cpuDevices); err != nil {
 		log.Errorf("failed to publish DRA resources: %v", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -202,6 +201,7 @@ func (p *draPlugin) IsRegistered() (bool, error) {
 
 	status := p.plugin.RegistrationStatus()
 	if status == nil {
+                dra.Info("***********dra not registered ************")
 		return false, nil
 	}
 

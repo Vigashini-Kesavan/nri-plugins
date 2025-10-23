@@ -55,14 +55,14 @@ type policy struct {
 	cfg          *cfgapi.Config // our runtime configuration
 	cache        cache.Cache    // pod/container cache
         sys          system.System             // system/HW topology info
-        
+
 	allowed      cpuset.CPUSet //
 	reserved     cpuset.CPUSet //
 	reserveCnt   int
 	rtClaimed    cpuset.CPUSet //
 	isolated     cpuset.CPUSet //
         claimedCnt   int
-        depth        int 
+        depth        int
 	nodeCnt      int                       // number of pools
 	root         Node
 	nodes        map[string]Node           //
@@ -107,17 +107,28 @@ func (p *policy) Setup(opts *policyapi.BackendOptions) error {
 
 	p.cfg = cfg
 	p.cache = opts.Cache
-	p.options = opts
+	p.sys = opts.System
+        p.options = opts
 	p.cpuAllocator = cpuallocator.NewCPUAllocator(opts.System)
 	p.memAllocator, err = libmem.NewAllocator(libmem.WithSystemNodes(opts.System))
 	if err != nil {
 		return policyError("faile dto initialize %s policy: %w", err)
 	}
 
-	// opt = cfg
-	// deafultPrio = cfg.DefaultCPUPriority.Value()
+	opt = cfg
        // This part gets topology and priority info of CPUs. Guess not needed for this.
 
+
+	if err := p.initialize(); err != nil {
+		return policyError("failed to initialize %s policy: %w", PolicyName, err)
+	}
+
+	if err := p.registerImplicitAffinities(); err != nil {
+		return policyError("failed to initialize %s policy: %w", PolicyName, err)
+	}
+
+
+	log.Info("***** default CPU priority is %s", defaultPrio)
 	return nil
 }
 
@@ -125,10 +136,9 @@ func (p *policy) Setup(opts *policyapi.BackendOptions) error {
 func (p *policy) Start() error {
 	log.Info("started...")
 
-	//p.root.Dump("<post-start>")
         p.checkAllocations("  <post-start>")
 
-        if err := p.options.PublishCPUs(p.allowed.Difference(p.reserved).List()); err != nil {
+        if err := p.options.PublishCPUs(p.sys.CPUIDs()); err != nil {
                 log.Errorf("failed to publish CPU DRA resources: %v", err)
         }
 
@@ -150,9 +160,7 @@ func (p *policy) Sync(add []cache.Container, del []cache.Container) error {
 	log.Info("synchronizing state...")
 	
 	for _, c := range del {
-                if err := p.ReleaseResources(c); err != nil {
-                        log.Warnf("failed to release resources for %s: %v", c.PrettyName(), err)
-                }
+                 log.Warnf("release resources for %s: ** should be back", c.PrettyName())
         }
 
         for _, c := range add {
@@ -169,7 +177,7 @@ func (p *policy) Sync(add []cache.Container, del []cache.Container) error {
 func (p *policy) checkAllocations(format string, args ...interface{}) {
 	var (
 		prefix  = fmt.Sprintf(format, args...)
-		cpuExcl = 0
+		cpuExcl = 1
 		cpuPart = 0
 		mem     = int64(0)
 		ctr     = map[string]Grant{}
@@ -224,7 +232,6 @@ func (p *policy) AllocateResources(container cache.Container) error {
                 return err
         }
 
-        //p.root.Dump("<post-alloc>")
         p.checkAllocations("  <post-alloc %s>", container.PrettyName())
 
 	return nil
@@ -250,7 +257,6 @@ func (p *policy) ReleaseResources(container cache.Container) error {
 		p.updateSharedAllocations(&grant)
 	}
 
-        //p.root.Dump("<post-release>")
         p.checkAllocations("  <post-release %s>", container.PrettyName())
 
 	return nil
@@ -273,7 +279,6 @@ func (p *policy) UpdateResources(container cache.Container) error {
                 return err
         }
 
-        //p.root.Dump("<post-update>")
         p.checkAllocations("  <post-update %s>", container.PrettyName())
 
 	return nil
@@ -443,4 +448,21 @@ func (a *allocations) getContainerPoolHints() ([]cache.Container, map[string]str
         }
         return containers, hints
 }
+
+// Initialize or reinitialize the policy.
+func (p *policy) initialize() error {
+	p.nodes = nil
+	p.pools = nil
+	p.root = nil
+	p.nodeCnt = 0
+	p.depth = 0
+	p.allocations = p.newAllocations()
+
+	if err := p.buildPoolsByTopology(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
 

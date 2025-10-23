@@ -15,34 +15,31 @@
 package realtime
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
-	"errors"
-        "encoding/json"
 	"time"
 
 	"github.com/containers/nri-plugins/pkg/utils/cpuset"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/containers/nri-plugins/pkg/agent/podresapi"
 	"github.com/containers/nri-plugins/pkg/resmgr/cache"
 	libmem "github.com/containers/nri-plugins/pkg/resmgr/lib/memory"
 	policyapi "github.com/containers/nri-plugins/pkg/resmgr/policy"
 	system "github.com/containers/nri-plugins/pkg/sysfs"
 	idset "github.com/intel/goresctrl/pkg/utils"
-	"github.com/containers/nri-plugins/pkg/agent/podresapi"
 
-         resmgr "github.com/containers/nri-plugins/pkg/apis/resmgr/v1alpha1"
-        "github.com/containers/nri-plugins/pkg/resmgr/events"
+	resmgr "github.com/containers/nri-plugins/pkg/apis/resmgr/v1alpha1"
+	"github.com/containers/nri-plugins/pkg/resmgr/events"
 )
 
 // buildPoolsByTopology builds a hierarchical tree of pools based on HW topology.
 func (p *policy) buildPoolsByTopology() error {
-	if err := p.checkHWTopology(); err != nil {
-		return err
-	}
 
 	// We build a tree of pools by examining sockets, dies, and NUMA nodes.
 	// If we have multiple sockets, we create an extra virtual root for the
@@ -91,25 +88,10 @@ func (p *policy) enumeratePools() {
 
 func (p *policy) buildRootPool() {
 	var (
-		root  Node = nilnode
-		vroot *virtualnode
+		root Node = nilnode
 	)
 
-	if p.sys.SocketCount() > 1 {
-		vroot = p.NewVirtualNode("root", nilnode)
-		p.nodes[vroot.Name()] = vroot
-
-		p.root = vroot
-		root = vroot
-
-		log.Info("+ created pool %s", vroot.Name())
-
-		cpus := p.sys.CPUSet()
-		vroot.node.noderes, vroot.node.freeres = p.getCpuSupply(vroot, cpus)
-		vroot.node.mem, vroot.node.pMem, vroot.node.hbm = p.getMemSupply(vroot, cpus)
-	} else {
-		log.Info("- omitted virtual root pool (single socket HW)")
-	}
+	log.Info("- omitted virtual root pool (single socket HW)")
 
 	for _, socketID := range p.sys.PackageIDs() {
 		p.buildSocketPool(socketID, root)
@@ -366,6 +348,7 @@ func (p *policy) allocatePool(container cache.Container, poolHint string) (Grant
 	log.Info("**** claimed CPU(s): %s, unclaimed CPU: %d", claimed, unclaimed)
 
 	request := newRequest(container, claimed, p.memAllocator.Masks().AvailableTypes())
+	log.Info("**** request: %s", request)
 
 	if p.root.FreeSupply().ReservedCPUs().IsEmpty() && request.CPUType() == cpuReserved {
 		// Fallback to allocating reserved CPUs from the shared pool
@@ -381,14 +364,14 @@ func (p *policy) allocatePool(container cache.Container, poolHint string) (Grant
 		}
 		offer = o
 	} else {
-		affinity, err := p.calculatePoolAffinities(request.GetContainer())
+		_, err := p.calculatePoolAffinities(request.GetContainer())
 
 		if err != nil {
 			return nil, policyError("failed to calculate affinity for container %s: %v",
 				container.PrettyName(), err)
 		}
 
-		scores, pools := p.sortPoolsByScore(request, affinity)
+		/*scores, pools := p.sortPoolsByScore(request, affinity)
 
 		if log.DebugEnabled() {
 			log.Debug("* node fitting for %s", request)
@@ -423,10 +406,10 @@ func (p *policy) allocatePool(container cache.Container, poolHint string) (Grant
 		offer = scores[pool.NodeID()].Offer()
 		if offer == nil {
 			return nil, policyError("failed to get offer for request %s", request)
-		}
+		}*/
 	}
 
-	supply := pool.FreeSupply()
+	supply := p.root.FreeSupply()
 	grant, updates, err := supply.Allocate(request, offer)
 	if err != nil {
 		return nil, policyError("failed to allocate %s from %s: %v",
@@ -519,8 +502,11 @@ func (p *policy) allocateClaim(claim policyapi.Claim) error {
 func (p *policy) getPoolForCPUs(cpus cpuset.CPUSet) Node {
 	var pool Node
 	for _, n := range p.pools {
-		s := n.GetSupply()
+		log.Info("for pool within range %s checking pool %s", cpus.String(), n.Name())
+		s := MockSupply
+		log.Info("  pool %s has CPUs: %s", n.Name(), s.DumpCapacity())
 		poolCPUs := s.SharableCPUs().Union(s.IsolatedCPUs()).Union(s.ReservedCPUs())
+		log.Info("  pool %s total CPUs: %s", n.Name(), poolCPUs.String())
 		if poolCPUs.Intersection(cpus).Equals(cpus) {
 			if pool == nil {
 				pool = n
@@ -1122,7 +1108,6 @@ func (p *policy) compareScores(request Request, pools []Node, scores map[int]Sco
 			return id1 < id2
 		}
 
-
 		log.Debug("  - colocation score is a TIE")
 
 		// more shared capacity wins
@@ -1317,11 +1302,13 @@ func (p *policy) memZoneType(zone libmem.NodeMask) libmem.TypeMask {
 }
 
 func (p *policy) poolZoneCapacity(pool Node, memType memoryType) int64 {
-	return p.memAllocator.ZoneCapacity(libmem.NewNodeMask(pool.GetMemset(memType).Members()...))
+	return 26973974937
+	// p.memAllocator.ZoneCapacity(libmem.NewNodeMask(pool.GetMemset(memType).Members()...))
 }
 
 func (p *policy) poolZoneFree(pool Node, memType memoryType) int64 {
-	return p.memAllocator.ZoneFree(libmem.NewNodeMask(pool.GetMemset(memType).Members()...))
+	return 2697397493
+	// p.memAllocator.ZoneFree(libmem.NewNodeMask(pool.GetMemset(memType).Members()...))
 }
 
 // Calculate pool affinities for the given container.
@@ -1733,4 +1720,3 @@ func (p *policy) finishColdStart(c cache.Container) (bool, error) {
 
 	return true, nil
 }
-

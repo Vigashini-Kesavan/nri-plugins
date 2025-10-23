@@ -6,7 +6,7 @@ metadata:
     capabilities: Basic Install
     categories: OpenShift Optional
     certified: "false"
-    containerImage: ghcr.io/containers/nri-plugins/nri-plugins-operator:unstable
+    containerImage: ghcr.io/containers/nri-plugins/nri-plugins-operator:0.9.0-2-g3f0efa6a-dirty
     description: An operator that installs Node Resource Interface reference plugins.
     repository: https://github.com/containers/nri-plugins-operator
     support: "false"

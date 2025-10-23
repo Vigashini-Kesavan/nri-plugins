@@ -38,6 +38,9 @@ func (c *FakeConfigV1alpha1) TopologyAwarePolicies(namespace string) v1alpha1.To
 	return &FakeTopologyAwarePolicies{c, namespace}
 }
 
+func (c *FakeConfigV1alpha1) RealTimePolicies(namespace string) v1alpha1.RealTimePolicyInterface {
+	return &FakeRealTimePolicies{c, namespace}
+}
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeConfigV1alpha1) RESTClient() rest.Interface {

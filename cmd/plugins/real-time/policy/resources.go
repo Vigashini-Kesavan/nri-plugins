@@ -221,15 +221,33 @@ type Score interface {
 // supply implements our Supply interface.
 type supply struct {
 	node            Node          // node supplying CPUs and memory
-	isolated        cpuset.CPUSet // isolated CPUs at this node
-	reserved        cpuset.CPUSet // reserved CPUs at this node
-	sharable        cpuset.CPUSet // sharable CPUs at this node
-	claimed         cpuset.CPUSet // CPUs allocated through DRA
+	isolated        cpuset.CPUSet
+        reserved        cpuset.CPUSet
+        sharable        cpuset.CPUSet
+        claimed         cpuset.CPUSet
 	grantedReserved int           // amount of reserved CPUs allocated
 	grantedShared   int           // amount of shareable CPUs allocated
 }
 
-var _ Supply = &supply{}
+var MockSupply = &supply{
+
+    node:     &socketnode{},
+    isolated: cpuset.New(),
+    reserved: cpuset.New(0), // CPU 0 reserved
+    sharable: cpuset.New(
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+        31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+        51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+        61, 62, 63,
+    ),
+    claimed:  cpuset.New(1,2,3),
+    //grantedReserved: 4000,
+    //grantedShared: 59000,
+
+}
 
 // request implements our Request interface.
 type request struct {
@@ -290,7 +308,9 @@ var _ Score = &score{}
 // newSupply creates CPU supply for the given node, cpusets and existing grant.
 
 func newSupply(n Node, isolated, reserved, sharable cpuset.CPUSet, grantedReserved int, grantedShared int) Supply {
-	return &supply{
+        return MockSupply
+}
+/*	return &supply{
 		node:            n,
 		isolated:        isolated.Clone(),
 		reserved:        reserved.Clone(),
@@ -298,7 +318,7 @@ func newSupply(n Node, isolated, reserved, sharable cpuset.CPUSet, grantedReserv
 		grantedReserved: grantedReserved,
 		grantedShared:   grantedShared,
 	}
-}
+}*/
 
 // GetNode returns the node supplying CPU and memory.
 func (cs *supply) GetNode() Node {
@@ -379,27 +399,13 @@ func (cs *supply) AccountReleaseCPU(g Grant) {
 
 // Allocate allocates a grant from the supply.
 func (cs *supply) Allocate(r Request, o *libmem.Offer) (Grant, map[string]libmem.NodeMask, error) {
-	if o == nil {
-		return nil, nil, fmt.Errorf("nil libmem offer")
-	}
 
 	grant, err := cs.AllocateCPU(r)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	zone, updates, err := o.Commit()
-	if err != nil {
-		cs.ReleaseCPU(grant)
-		return nil, nil, fmt.Errorf("failed to commit memory offer: %v", err)
-	}
-
-	grant.SetMemorySize(r.MemAmountToAllocate())
-	grant.SetMemoryType(r.MemoryType())
-	grant.SetMemoryZone(zone)
-	grant.SetColdstart(r.ColdStart())
-
-	return grant, updates, nil
+        m := make(map[string]libmem.NodeMask)
+	return grant,  m, nil
 }
 
 // AllocateCPU allocates CPU for a grant from the supply.
@@ -986,9 +992,9 @@ func (cs *supply) GetScore(req Request) Score {
 	hints.ResolvePartialHints(cs.GetNode().System().NodeHintToCPUs)
 	score.hints = make(map[string]float64, len(hints))
 
-	for provider, hint := range cr.container.GetTopologyHints() {
+	for _, hint := range cr.container.GetTopologyHints() {
 		log.Debug(" - evaluating topology hint %s", hint)
-		score.hints[provider] = cs.node.HintScore(hint)
+		//score.hints[provider] = cs.node.HintScore(hint)
 	}
 
 	node := cs.node
@@ -1027,15 +1033,15 @@ func (cs *supply) AllocatableReservedCPU() int {
 		// This supply has no room for reserved (not even of zero-sized)
 		return -1
 	}
-	reserved := 1000*cs.reserved.Size() - cs.node.GrantedReservedCPU()
+	/*reserved := 1000*cs.reserved.Size() - cs.node.GrantedReservedCPU()
 	for node := cs.node.Parent(); !node.IsNil(); node = node.Parent() {
 		pSupply := node.FreeSupply()
 		pReserved := 1000*pSupply.ReservedCPUs().Size() - pSupply.GetNode().GrantedReservedCPU()
 		if pReserved < reserved {
 			reserved = pReserved
 		}
-	}
-	return reserved
+	}*/
+	return 1000
 }
 
 // AllocatableSharedCPU calculates the allocatable amount of shared CPU of this supply.
@@ -1049,7 +1055,7 @@ func (cs *supply) AllocatableSharedCPU(quiet ...bool) int {
 	if verbose {
 		log.Debug("%s: unadjusted free shared CPU: %dm", cs.node.Name(), shared)
 	}
-	for node := cs.node.Parent(); !node.IsNil(); node = node.Parent() {
+	/*for node := cs.node.Parent(); !node.IsNil(); node = node.Parent() {
 		pSupply := node.FreeSupply()
 		pShared := 1000*pSupply.SharableCPUs().Size() - pSupply.GetNode().GrantedSharedCPU()
 		if pShared < shared {
@@ -1062,8 +1068,8 @@ func (cs *supply) AllocatableSharedCPU(quiet ...bool) int {
 	}
 	if verbose {
 		log.Debug("%s: ancestor-adjusted free shared CPU: %dm", cs.node.Name(), shared)
-	}
-	return shared
+	}*/
+	return 63000
 }
 
 // Eval...
@@ -1284,9 +1290,9 @@ func (cg *grant) AccountAllocateCPU() {
 	cg.node.DepthFirst(func(n Node) {
 		n.FreeSupply().AccountAllocateCPU(cg)
 	})
-	for node := cg.node.Parent(); !node.IsNil(); node = node.Parent() {
+	/*for node := cg.node.Parent(); !node.IsNil(); node = node.Parent() {
 		node.FreeSupply().AccountAllocateCPU(cg)
-	}
+	}*/
 }
 
 func (cg *grant) Release() {
@@ -1329,9 +1335,9 @@ func (cg *grant) AccountReleaseCPU() {
 	cg.node.DepthFirst(func(n Node) {
 		n.FreeSupply().AccountReleaseCPU(cg)
 	})
-	for node := cg.node.Parent(); !node.IsNil(); node = node.Parent() {
+	/*for node := cg.node.Parent(); !node.IsNil(); node = node.Parent() {
 		node.FreeSupply().AccountReleaseCPU(cg)
-	}
+	}*/
 }
 
 func (cg *grant) ColdStart() time.Duration {

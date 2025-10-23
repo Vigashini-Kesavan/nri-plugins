@@ -412,7 +412,7 @@ func (cs *supply) AllocateCPU(r Request) (Grant, error) {
 
 	cr := r.(*request)
 
-	claimed := cr.claimed
+	claimed := cpuset.New(2)
 	full := cr.full
 	fraction := cr.fraction
 

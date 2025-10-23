@@ -36,6 +36,7 @@ const (
 	balloonsConfig configKind = iota
 	topologyAwareConfig
 	templateConfig
+        realTimeConfig
 )
 
 type configIf struct {
@@ -74,6 +75,8 @@ func (cif *configIf) CreateWatch(ctx context.Context, ns, name string) (watch.In
 		return cif.cli.ConfigV1alpha1().TopologyAwarePolicies(ns).Watch(ctx, selector)
 	case templateConfig:
 		return cif.cli.ConfigV1alpha1().TemplatePolicies(ns).Watch(ctx, selector)
+	case realTimeConfig:
+		return cif.cli.ConfigV1alpha1().RealTimePolicies(ns).Watch(ctx, selector)
 	}
 	return nil, fmt.Errorf("configIf: unknown config type %v", cif.kind)
 }
@@ -92,6 +95,8 @@ func (cif *configIf) PatchStatus(ctx context.Context, ns, name string, pt types.
 		_, err = cif.cli.ConfigV1alpha1().TopologyAwarePolicies(ns).Patch(ctx, name, pt, data, opts, "status")
 	case templateConfig:
 		_, err = cif.cli.ConfigV1alpha1().TemplatePolicies(ns).Patch(ctx, name, pt, data, opts, "status")
+	case realTimeConfig:
+		_, err = cif.cli.ConfigV1alpha1().RealTimePolicies(ns).Patch(ctx, name, pt, data, opts, "status")
 	}
 
 	if err != nil {
@@ -122,6 +127,12 @@ func (cif *configIf) Unmarshal(data []byte, file string) (runtime.Object, error)
 		}
 	case templateConfig:
 		cfg := &cfgapi.TemplatePolicy{}
+		if err = yaml.UnmarshalStrict(data, cfg); err == nil {
+			cfg.Name = file + ":" + cfg.Name
+			obj = cfg
+		}
+	case realTimeConfig:
+		cfg := &cfgapi.RealTimePolicy{}
 		if err = yaml.UnmarshalStrict(data, cfg); err == nil {
 			cfg.Name = file + ":" + cfg.Name
 			obj = cfg

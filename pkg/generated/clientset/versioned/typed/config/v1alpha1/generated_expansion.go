@@ -21,3 +21,5 @@ type BalloonsPolicyExpansion interface{}
 type TemplatePolicyExpansion interface{}
 
 type TopologyAwarePolicyExpansion interface{}
+
+type RealTimePolicyExpansion interface{}

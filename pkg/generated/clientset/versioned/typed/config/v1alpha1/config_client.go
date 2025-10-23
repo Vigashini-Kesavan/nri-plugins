@@ -29,6 +29,7 @@ type ConfigV1alpha1Interface interface {
 	BalloonsPoliciesGetter
 	TemplatePoliciesGetter
 	TopologyAwarePoliciesGetter
+        RealTimePoliciesGetter
 }
 
 // ConfigV1alpha1Client is used to interact with features provided by the config group.
@@ -46,6 +47,10 @@ func (c *ConfigV1alpha1Client) TemplatePolicies(namespace string) TemplatePolicy
 
 func (c *ConfigV1alpha1Client) TopologyAwarePolicies(namespace string) TopologyAwarePolicyInterface {
 	return newTopologyAwarePolicies(c, namespace)
+}
+
+func (c *ConfigV1alpha1Client) RealTimePolicies(namespace string) RealTimePolicyInterface {
+	return newRealTimePolicies(c, namespace)
 }
 
 // NewForConfig creates a new ConfigV1alpha1Client for the given config.
