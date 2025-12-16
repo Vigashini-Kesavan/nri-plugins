@@ -158,14 +158,21 @@ func (p *policy) Reconfigure(newCfg interface{}) error {
 // Sync synchronizes the state of this policy.
 func (p *policy) Sync(add []cache.Container, del []cache.Container) error {
 	log.Info("synchronizing state...")
-	
+
 	for _, c := range del {
+
+	    if err := p.ReleaseResources(c); err != nil {
+			log.Warnf("failed to release resources for %s: %v", c.PrettyName(), err)
+	    } else {
                  log.Warnf("release resources for %s: ** should be back", c.PrettyName())
+   	    }
         }
 
         for _, c := range add {
                 if err := p.AllocateResources(c); err != nil {
                         log.Warnf("failed to allocate resources for %s: %v", c.PrettyName(), err)
+                } else {
+			log.Warnf("Allocate resources %s",  c.PrettyName())
                 }
         }
 
@@ -232,7 +239,8 @@ func (p *policy) AllocateResources(container cache.Container) error {
                 return err
         }
 
-        p.checkAllocations("  <post-alloc %s>", container.PrettyName())
+        p.root.Dump("<post-alloc>")
+	p.checkAllocations("  <post-alloc %s>", container.PrettyName())
 
 	return nil
 }
@@ -244,7 +252,7 @@ func (p *policy) allocateResources(container cache.Container, poolHint string) e
                         container.PrettyName(), err)
         }
         p.applyGrant(grant)
-        p.updateSharedAllocations(&grant)
+	p.updateSharedAllocations(&grant)
 
         return nil
 }
@@ -252,11 +260,12 @@ func (p *policy) allocateResources(container cache.Container, poolHint string) e
 // ReleaseResources is a resource release request for this policy.
 func (p *policy) ReleaseResources(container cache.Container) error {
 	log.Info("releasing resources of %s...", container.PrettyName())
-	
+
 	if grant, found := p.releasePool(container); found {
 		p.updateSharedAllocations(&grant)
 	}
 
+        p.root.Dump("<post-release>")
         p.checkAllocations("  <post-release %s>", container.PrettyName())
 
 	return nil
@@ -265,13 +274,13 @@ func (p *policy) ReleaseResources(container cache.Container) error {
 // UpdateResources is a resource allocation update request for this policy.
 func (p *policy) UpdateResources(container cache.Container) error {
 	log.Info("(not) updating container %s...", container.PrettyName())
-	
+
         grant, found := p.releasePool(container)
         if !found {
                 log.Warnf("can't find allocation to update for %s", container.PrettyName())
                 return p.AllocateResources(container)
         }
-        p.updateSharedAllocations(&grant)
+	p.updateSharedAllocations(&grant)
 
         poolHint := grant.GetCPUNode().Name()
         err := p.allocateResources(container, poolHint)
@@ -458,11 +467,43 @@ func (p *policy) initialize() error {
 	p.depth = 0
 	p.allocations = p.newAllocations()
 
-	if err := p.buildPoolsByTopology(); err != nil {
+	if err := p.checkConstraints(); err != nil {
+		return err
+        }
+
+        if err := p.buildPoolsByTopology(); err != nil {
 		return err
 	}
 	return nil
 }
 
 
+func (p *policy) checkConstraints() error {
+        amount, kind := p.cfg.AvailableResources.Get(cfgapi.CPU)
+	switch kind {
+	case cfgapi.AmountCPUSet:
+		cset, err := amount.ParseCPUSet()
+		if err != nil {
+			return fmt.Errorf("failed to parse available CPU cpuset '%s': %w", amount, err)
+		}
+		p.allowed = cset
+	case cfgapi.AmountQuantity:
+		return fmt.Errorf("can't handle CPU resources given as resource.Quantity (%v)", amount)
+	case cfgapi.AmountAbsent:
+		// default to all online cpus
+		// DEBUG: log system CPU info to help debug empty allowed set
+		if p.sys == nil {
+			log.Error("system interface (p.sys) is nil")
+		} else {
+			log.Debugf("system CPUSet: %s", p.sys.CPUSet().String())
+			log.Debugf("system Offlined: %s", p.sys.Offlined().String())
+		}
+		p.allowed = p.sys.CPUSet().Difference(p.sys.Offlined())
+	}
 
+	p.isolated = p.sys.Isolated().Intersection(p.allowed)
+
+	return nil
+
+
+}

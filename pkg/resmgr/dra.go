@@ -342,7 +342,8 @@ func (p *draPlugin) UnprepareResourceClaims(ctx context.Context, claims []kubele
 			if err := p.resmgr.policy.ReleaseClaim(claim); err != nil {
 				log.Errorf("failed to release claim %s: %v", claim, err)
 			}
-		}
+
+                }
 
 		result[c.UID] = nil
 	}

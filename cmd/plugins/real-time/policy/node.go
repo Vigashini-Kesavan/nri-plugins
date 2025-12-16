@@ -274,13 +274,13 @@ func (n *node) LinkParent(parent Node) {
 
 // AddChildren appends the nodes to the childres, *WITHOUT* setting their parent.
 func (n *node) AddChildren(nodes []Node) {
- for _, c := range nodes {
-        if c == n {
-            fmt.Printf("WARNING: attempted to add node %p as its own child, skipping\n", n)
-            continue
-        }
-        n.children = append(n.children, nodes...)
-    }
+	for _, c := range nodes {
+		if c == n {
+			fmt.Printf("WARNING: attempted to add node %p as its own child, skipping\n", n)
+			continue
+		}
+		n.children = append(n.children, nodes...)
+	}
 }
 
 // Dump information/state of the node.
@@ -357,12 +357,12 @@ func (n *node) Policy() *policy {
 
 // GetSupply returns the full CPU supply of this node.
 func (n *node) GetSupply() Supply {
-	return MockSupply
+	return n.self.node.GetSupply()
 }
 
 // FreeSupply returns the available CPU supply of this node.
 func (n *node) FreeSupply() Supply {
-	return MockSupply
+	return n.freeres
 }
 
 // Get the set of memory attached to this node.
@@ -381,7 +381,7 @@ func (n *node) GetPhysicalNodeIDs() []idset.ID {
 // GrantedReservedCPU returns the amount of granted reserved CPU of this node and its children.
 func (n *node) GrantedReservedCPU() int {
 	grantedReserved := 1000 //n.freeres.GrantedReserved()
-        return grantedReserved
+	return grantedReserved
 	for _, c := range n.children {
 		grantedReserved += c.GrantedReservedCPU()
 	}
@@ -402,29 +402,31 @@ func (n *node) GetScore(req Request) Score {
 	f := n.FreeSupply()
 	return f.GetScore(req)
 }
+
 var depth int
+
 // HintScore calculates the (CPU) score of the node for the given topology hint.
 func (n *node) HintScore(hint topology.Hint) float64 {
-    depth++
-    if n == nil {
+	depth++
+	if n == nil {
 
-        fmt.Println("DEBUG: first return")
-        return 0
-    }
-    if n == n.parent  {
-        fmt.Println("DEBUG: second return")
-        return 0
-    }
-if depth > 100 {
-    panic("recursion runaway")
-    return 0;
-}
-    if n.self.node == n {
-        fmt.Println("DEBUG: self-reference detected, stopping recursion")
-        return 0
-    }
+		fmt.Println("DEBUG: first return")
+		return 0
+	}
+	if n == n.parent {
+		fmt.Println("DEBUG: second return")
+		return 0
+	}
+	if depth > 100 {
+		panic("recursion runaway")
+		return 0
+	}
+	if n.self.node == n {
+		fmt.Println("DEBUG: self-reference detected, stopping recursion")
+		return 0
+	}
 
-    return n.self.node.HintScore(hint)
+	return n.self.node.HintScore(hint)
 }
 
 func (n *node) GetMemoryType() memoryType {
@@ -464,7 +466,7 @@ func (n *numanode) dump(prefix string, level ...int) {
 
 // Get CPU supply available at this node.
 func (n *numanode) GetSupply() Supply {
-	return MockSupply
+	return n.noderes.Clone()
 }
 
 func (n *numanode) GetPhysicalNodeIDs() []idset.ID {
@@ -488,7 +490,6 @@ func (n *numanode) GetMemset(mtype memoryType) idset.IDSet {
 	return mset
 }
 
-
 // NewDieNode create a node for a CPU die.
 func (p *policy) NewDieNode(id idset.ID, parent Node) *dienode {
 	pkg := parent.(*socketnode)
@@ -508,7 +509,7 @@ func (n *dienode) dump(prefix string, level ...int) {
 
 // Get CPU supply available at this node.
 func (n *dienode) GetSupply() Supply {
-	return MockSupply
+	return n.noderes.Clone()
 }
 
 func (n *dienode) GetPhysicalNodeIDs() []idset.ID {
@@ -538,7 +539,6 @@ func (n *dienode) GetMemset(mtype memoryType) idset.IDSet {
 	return mset
 }
 
-
 // NewSocketNode create a node for a CPU socket.
 func (p *policy) NewSocketNode(id idset.ID, parent Node) *socketnode {
 	n := &socketnode{}
@@ -557,7 +557,7 @@ func (n *socketnode) dump(prefix string, level ...int) {
 
 // Get CPU supply available at this node.
 func (n *socketnode) GetSupply() Supply {
-	return MockSupply //n.noderes.Clone()
+	return n.noderes.Clone()
 }
 
 func (n *socketnode) GetPhysicalNodeIDs() []idset.ID {
@@ -623,7 +623,6 @@ func (n *virtualnode) GetMemset(mtype memoryType) idset.IDSet {
 	return mset
 }
 
-
 func (n *virtualnode) GetPhysicalNodeIDs() []idset.ID {
 	ids := make([]idset.ID, 0)
 	for _, c := range n.children {
@@ -652,4 +651,3 @@ func indent(prefix string, level ...int) string {
 	depth := level[0] * IndentDepth
 	return prefix + fmt.Sprintf("%*.*s", depth, depth, "")
 }
-

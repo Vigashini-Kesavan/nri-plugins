@@ -16,7 +16,6 @@ package realtime
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -111,6 +110,7 @@ func (p *policy) buildSocketPool(socketID idset.ID, root Node) {
 
 	cpus := p.sys.Package(socketID).CPUSet()
 	socket.node.noderes, socket.node.freeres = p.getCpuSupply(socket, cpus)
+        log.Info ("dump socket noderes %v", socket.node.noderes)
 	socket.node.mem, socket.node.pMem, socket.node.hbm = p.getMemSupply(socket, cpus)
 
 	if dieIDs := p.sys.Package(socketID).DieIDs(); len(dieIDs) > 1 {
@@ -178,7 +178,7 @@ func (p *policy) getCpuSupply(node Node, cpus cpuset.CPUSet) (Supply, Supply) {
 
 	s := newSupply(node, isolated, reserved, sharable, 0, 0)
 
-	log.Info("    %s CPU: %s", node.Name(), s.DumpCapacity())
+	log.Info("    %s **** THIS **** CPU: %s", node.Name(), s.DumpCapacity())
 
 	return s, s.Clone()
 }
@@ -371,42 +371,6 @@ func (p *policy) allocatePool(container cache.Container, poolHint string) (Grant
 				container.PrettyName(), err)
 		}
 
-		/*scores, pools := p.sortPoolsByScore(request, affinity)
-
-		if log.DebugEnabled() {
-			log.Debug("* node fitting for %s", request)
-			for idx, n := range pools {
-				log.Debug("    - #%d: node %s, score %s, affinity: %d",
-					idx, n.Name(), scores[n.NodeID()], affinity[n.NodeID()])
-			}
-		}
-
-		if len(pools) == 0 {
-			return nil, policyError("no suitable pool found for container %s",
-				container.PrettyName())
-		}
-
-		if poolHint != "" {
-			for idx, p := range pools {
-				if p.Name() == poolHint {
-					log.Debug("* using hinted pool %q (#%d best fit)", poolHint, idx+1)
-					pool = p
-					break
-				}
-			}
-			if pool == nil {
-				log.Debug("* cannot use hinted pool %q", poolHint)
-			}
-		}
-
-		if pool == nil {
-			pool = pools[0]
-		}
-
-		offer = scores[pool.NodeID()].Offer()
-		if offer == nil {
-			return nil, policyError("failed to get offer for request %s", request)
-		}*/
 	}
 
 	supply := p.root.FreeSupply()
@@ -503,11 +467,11 @@ func (p *policy) getPoolForCPUs(cpus cpuset.CPUSet) Node {
 	var pool Node
 	for _, n := range p.pools {
 		log.Info("for pool within range %s checking pool %s", cpus.String(), n.Name())
-		s := MockSupply
+		s :=  n.GetSupply()
 		log.Info("  pool %s has CPUs: %s", n.Name(), s.DumpCapacity())
 		poolCPUs := s.SharableCPUs().Union(s.IsolatedCPUs()).Union(s.ReservedCPUs())
 		log.Info("  pool %s total CPUs: %s", n.Name(), poolCPUs.String())
-		if poolCPUs.Intersection(cpus).Equals(cpus) {
+                if poolCPUs.Intersection(cpus).Equals(cpus) {
 			if pool == nil {
 				pool = n
 			} else {
@@ -550,7 +514,7 @@ func (p *policy) getLargestSharedUsers(pool Node) []Grant {
 func (p *policy) releaseClaim(claim policyapi.Claim) error {
 	cpus := cpuset.New(claim.GetDevices()...)
 	p.root.FreeSupply().UnclaimCPUs(cpus)
-	p.updateSharedAllocations(nil)
+        p.updateSharedAllocations(nil)
 
 	return nil
 }
@@ -582,6 +546,10 @@ func (p *policy) getClaimedCPUs(c cache.Container) (cpuset.CPUSet, int, error) {
 		return claimed, unclaimed,
 			fmt.Errorf("invalid claimed (%s CPU(s)) vs. requested/native CPU (%dm)",
 				claimed, request.MilliValue())
+	}
+	// Hack for Synchronize() Hook, TDU with a valid soln
+	if claimed.Size() > 0 {
+		p.root.FreeSupply().ClaimCPUs(claimed)
 	}
 
 	return claimed, unclaimed, nil
@@ -654,11 +622,6 @@ func (p *policy) applyGrant(grant Grant) {
 		return
 	}
 
-	mems := libmem.NodeMask(0)
-	if opt.PinMemory {
-		mems = grant.GetMemoryZone()
-	}
-
 	if opt.PinCPU {
 		if cpuType == cpuPreserve {
 			log.Info("  => preserving %s cpuset %s", container.PrettyName(), container.GetCpusetCpus())
@@ -673,26 +636,6 @@ func (p *policy) applyGrant(grant Grant) {
 			}
 		}
 
-		// Notes:
-		//     It is extremely important to ensure that the exclusive subset of mixed
-		//     CPU allocations are really exclusive at the level of the whole system
-		//     and not just the orchestration. This is something we can't really do
-		//     from here reliably ATM.
-		//
-		//     We set the CPU scheduling weight for the whole container (all processes
-		//     within the container) according to container's partial allocation.
-		//     This is typically a sub-CPU allocation (< 1000 mCPU) which is meant to be
-		//     consumed by an 'infra/mgmt' process within the container from the shared subset
-		//     of CPUs assigned to the container. The container entry point or the processes
-		//     within the container are supposed to arrange so that the 'infra' process(es)
-		//     are pinned to the shared CPUs and the 'data/performance critical' critical'
-		//     process(es) to the exclusive CPU(s).
-		//
-		//     With this setup the kernel will slice out the correct amount of CPU from
-		//     the shared pool for the 'infra' process as it competes with other workloads'
-		//     processes in the same pool. Also the 'data' process should run fine, since
-		//     it does not need to compete for CPU with any other processes in the system
-		//     as long as that allocation is genuinely system-wide exclusive.
 		milliCPU := cpuPortion
 		if milliCPU == 0 {
 			milliCPU = 1000 * grant.ExclusiveCPUs().Size()
@@ -700,16 +643,6 @@ func (p *policy) applyGrant(grant Grant) {
 		container.SetCPUShares(int64(cache.MilliCPUToShares(int64(milliCPU))))
 	}
 
-	if grant.MemoryType() == memoryPreserve {
-		log.Debug("  => preserving %s memory pinning %s", container.PrettyName(), container.GetCpusetMems())
-	} else {
-		if mems != libmem.NodeMask(0) {
-			log.Debug("  => pinning %s to memory %s", container.PrettyName(), mems)
-		} else {
-			log.Debug("  => not pinning %s memory, memory set is empty...", container.PrettyName())
-		}
-		container.SetCpusetMems(mems.MemsetString())
-	}
 }
 
 // Release resources allocated by this grant.
@@ -775,7 +708,7 @@ func (p *policy) updateSharedAllocations(grant *Grant) {
 		if opt.PinCPU {
 			shared := other.GetCPUNode().FreeSupply().SharableCPUs()
 			exclusive := other.ExclusiveCPUs().Union(other.ClaimedCPUs())
-			if exclusive.IsEmpty() {
+                        if exclusive.IsEmpty() {
 				p.setPreferredCpusetCpus(other.GetContainer(), shared,
 					fmt.Sprintf("  => updating %s with shared CPUs of %s: %s...",
 						other, other.GetCPUNode().Name(), shared.String()))
@@ -1293,9 +1226,6 @@ func (p *policy) reallocMem(id string, nodes libmem.NodeMask, types libmem.TypeM
 	return p.memAllocator.Realloc(id, nodes, types)
 }
 
-func (p *policy) releaseMem(id string) error {
-	return p.memAllocator.Release(id)
-}
 
 func (p *policy) memZoneType(zone libmem.NodeMask) libmem.TypeMask {
 	return p.memAllocator.ZoneType(zone)
@@ -1486,12 +1416,6 @@ func (p *policy) reinstateGrants(grants map[string]Grant) error {
 	//    release memory for all grants... we'll then ask for offers
 	//    for them with affinity to the zone they had been allocated
 	//    to...
-
-	for id, grant := range grants {
-		if err := p.releaseMem(id); err != nil && !errors.Is(err, libmem.ErrUnknownRequest) {
-			log.Error("failed to release memory for grant %s: %v", grant, err)
-		}
-	}
 
 	for id, grant := range grants {
 		c := grant.GetContainer()

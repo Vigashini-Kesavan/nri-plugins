@@ -229,13 +229,15 @@ type supply struct {
 	grantedShared   int           // amount of shareable CPUs allocated
 }
 
+var _ Supply = &supply{}
+
 var MockSupply = &supply{
 
     node:     &socketnode{},
     isolated: cpuset.New(),
     reserved: cpuset.New(0), // CPU 0 reserved
     sharable: cpuset.New(
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+         1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
         21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
@@ -308,9 +310,7 @@ var _ Score = &score{}
 // newSupply creates CPU supply for the given node, cpusets and existing grant.
 
 func newSupply(n Node, isolated, reserved, sharable cpuset.CPUSet, grantedReserved int, grantedShared int) Supply {
-        return MockSupply
-}
-/*	return &supply{
+	return &supply{
 		node:            n,
 		isolated:        isolated.Clone(),
 		reserved:        reserved.Clone(),
@@ -318,7 +318,7 @@ func newSupply(n Node, isolated, reserved, sharable cpuset.CPUSet, grantedReserv
 		grantedReserved: grantedReserved,
 		grantedShared:   grantedShared,
 	}
-}*/
+}
 
 // GetNode returns the node supplying CPU and memory.
 func (cs *supply) GetNode() Node {
@@ -514,6 +514,9 @@ func (cs *supply) ReleaseCPU(g Grant) {
 	cs.sharable = cs.sharable.Union(sharable)
 	cs.grantedReserved -= g.ReservedPortion()
 	cs.grantedShared -= g.SharedPortion()
+
+        claimed :=  g.ClaimedCPUs()
+        cs.sharable = cs.sharable.Union(claimed)
 
 	g.AccountReleaseCPU()
 }
@@ -1290,17 +1293,10 @@ func (cg *grant) AccountAllocateCPU() {
 	cg.node.DepthFirst(func(n Node) {
 		n.FreeSupply().AccountAllocateCPU(cg)
 	})
-	/*for node := cg.node.Parent(); !node.IsNil(); node = node.Parent() {
-		node.FreeSupply().AccountAllocateCPU(cg)
-	}*/
 }
 
 func (cg *grant) Release() {
 	cg.GetCPUNode().FreeSupply().ReleaseCPU(cg)
-	err := cg.node.Policy().releaseMem(cg.container.GetID())
-	if err != nil {
-		log.Error("releasing memory for %s failed: %v", cg.container.PrettyName(), err)
-	}
 	cg.StopTimer()
 }
 
@@ -1335,9 +1331,9 @@ func (cg *grant) AccountReleaseCPU() {
 	cg.node.DepthFirst(func(n Node) {
 		n.FreeSupply().AccountReleaseCPU(cg)
 	})
-	/*for node := cg.node.Parent(); !node.IsNil(); node = node.Parent() {
+	for node := cg.node.Parent(); !node.IsNil(); node = node.Parent() {
 		node.FreeSupply().AccountReleaseCPU(cg)
-	}*/
+	}
 }
 
 func (cg *grant) ColdStart() time.Duration {

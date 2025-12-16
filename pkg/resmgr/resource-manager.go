@@ -134,6 +134,7 @@ func NewResourceManager(backend policy.Backend, agt *agent.Agent) (ResourceManag
 func (m *resmgr) Start() error {
 	log.Infof("starting agent, waiting for initial configuration...")
 	err := m.agent.Start(m.updateConfig)
+
 	if err != nil {
 		return err
 	}

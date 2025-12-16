@@ -1022,8 +1022,9 @@ func (c *container) markPending(controllers ...string) {
 	}
 	for _, ctrl := range controllers {
 		c.pending[ctrl] = struct{}{}
-		c.cache.markPending(c)
+		//c.cache.markPending(c)
 	}
+		c.cache.markPending(c)
 }
 
 func (c *container) ClearPending(controller string) {

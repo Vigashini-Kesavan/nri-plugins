@@ -242,6 +242,7 @@ func (p *nriPlugin) syncWithNRI(pods []*api.PodSandbox, containers []*api.Contai
 		default:
 			nri.Info("discovered container %s (%s), in state %v, ignoring it...",
 				c.PrettyName(), c.GetID(), c.GetState())
+			allocated = append(allocated, c)
 		}
 	}
 
@@ -679,7 +680,7 @@ func (p *nriPlugin) getPendingUpdates(skip *api.Container) []*api.ContainerUpdat
 	updates := []*api.ContainerUpdate{}
 	for _, c := range m.cache.GetPendingContainers() {
 		if skip != nil && skip.GetId() == c.GetID() {
-			continue
+                        continue
 		}
 
 		if u := c.GetPendingUpdate(); u != nil {
@@ -692,7 +693,6 @@ func (p *nriPlugin) getPendingUpdates(skip *api.Container) []*api.ContainerUpdat
 			m.policy.ExportResourceData(c)
 		}
 	}
-
 	return updates
 }
 
@@ -972,9 +972,9 @@ func (p *nriPlugin) dump(dir, event string, args ...interface{}) {
 
 func (p *nriPlugin) dumpDetails(dir, event string, arg interface{}) {
 	// if debug is off for our debug source, we don't dump any details
-	if !nri.DebugEnabled() {
+	/*if !nri.DebugEnabled() {
 		return
-	}
+	}*/
 
 	if dir == in {
 		switch event {

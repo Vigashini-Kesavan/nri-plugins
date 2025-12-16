@@ -7,7 +7,7 @@ image:
   # tag, if defined will use the given image tag, otherwise Chart.AppVersion will be used
   #tag: unstable
   name: docker.io/library/nri-resource-policy-real-time
-  tag: 0.9.0-2-g3f0efa6a-dirty
+  tag: 0.9.0-2-g66150ac1-dirty
   pullPolicy: IfNotPresent
 
 config:
