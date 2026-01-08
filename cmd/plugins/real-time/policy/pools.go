@@ -374,6 +374,12 @@ func (p *policy) allocatePool(container cache.Container, poolHint string) (Grant
 	}
 
 	supply := p.root.FreeSupply()
+        namespace := container.GetNamespace()
+	if namespace == "kube-system" {
+		supply.SetSharableCPUs(cpuset.New(13,14,15))
+	} else {
+		supply.SetSharableCPUs(cpuset.New(2,3,4,5,6,7,8,9,10,11,12))
+	}
 	grant, updates, err := supply.Allocate(request, offer)
 	if err != nil {
 		return nil, policyError("failed to allocate %s from %s: %v",
@@ -706,7 +712,15 @@ func (p *policy) updateSharedAllocations(grant *Grant) {
 		}
 
 		if opt.PinCPU {
-			shared := other.GetCPUNode().FreeSupply().SharableCPUs()
+			somesupply := other.GetCPUNode().FreeSupply()
+			//shared := other.GetCPUNode().FreeSupply().SharableCPUs()
+			namespace := other.GetContainer().GetNamespace()
+			if namespace == "kube-system" {
+			       somesupply.SetSharableCPUs(cpuset.New(13,14,15))
+			} else {
+				somesupply.SetSharableCPUs(cpuset.New(2,3,4,5,6,7,8,9,10,11,12))
+			}
+			shared := somesupply.SharableCPUs()
 			exclusive := other.ExclusiveCPUs().Union(other.ClaimedCPUs())
                         if exclusive.IsEmpty() {
 				p.setPreferredCpusetCpus(other.GetContainer(), shared,

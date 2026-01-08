@@ -94,7 +94,7 @@ OTHER_IMAGE_TARGETS ?= \
 	nri-plugins-operator-bundle-image
 
 ifneq ($(V),1)
-  Q := 
+  Q :=
 endif
 
 # Git (tagged) version and revisions we'll use to linker-tag our binaries with.

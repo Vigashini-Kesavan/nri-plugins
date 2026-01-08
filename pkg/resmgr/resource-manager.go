@@ -107,7 +107,7 @@ func NewResourceManager(backend policy.Backend, agt *agent.Agent) (ResourceManag
 		return nil, err
 	}
 
-	log.Info("creating DRA plugin...")
+	log.Info("creating a new DRA plugin...")
 	drap, err := newDRAPlugin(m)
 	if err != nil {
 		return nil, err

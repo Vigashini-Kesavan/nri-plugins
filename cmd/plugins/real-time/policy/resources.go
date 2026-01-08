@@ -64,7 +64,8 @@ type Supply interface {
 	ReservedCPUs() cpuset.CPUSet
 	// SharableCPUs returns the sharable cpuset in this supply.
 	SharableCPUs() cpuset.CPUSet
-	// ClaimedCPUs returns the claimed CPUs for this supply.
+	SetSharableCPUs(cpuset.CPUSet)
+        // ClaimedCPUs returns the claimed CPUs for this supply.
 	ClaimedCPUs() cpuset.CPUSet
 	// GrantedReserved returns the locally granted reserved CPU capacity in this supply.
 	GrantedReserved() int
@@ -345,6 +346,9 @@ func (cs *supply) SharableCPUs() cpuset.CPUSet {
 	return cs.sharable.Clone()
 }
 
+func (cs *supply) SetSharableCPUs(cpus cpuset.CPUSet) {
+    cs.sharable = cpus.Clone()
+}
 // ClaimedCPUs returns the claimed CPUs in this supply.
 func (cs *supply) ClaimedCPUs() cpuset.CPUSet {
 	return cs.claimed.Clone()
